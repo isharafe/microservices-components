@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 public class OrderService {
 
 	private final OrderRepository orderRepository;
-	private final WebClient webClient;
+	private final WebClient.Builder webClientBuilder;
 
 	public void placeOrder(Order order) throws InsufficientQuantityException {
 		order.setOrderNo(UUID.randomUUID().toString());
@@ -31,8 +31,8 @@ public class OrderService {
 		 * call inventory service and
 		 * place order if product is in stock
 		 */
-		InventoryResponse[] inventoryResponses = webClient.get()
-		.uri("http://localhost:8082/api/inventory/isInStock",
+		InventoryResponse[] inventoryResponses = webClientBuilder.build().get()
+		.uri("http://inventory-service/api/inventory/isInStock",
 				uriBuilder -> {
 					order.getOrderLineItems()
 						.forEach(line -> uriBuilder.queryParam(line.getSkuCode(), line.getQuantity()));
