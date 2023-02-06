@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ms.orderservice.dto.OrderDto;
+import com.ms.orderservice.exception.InsufficientQuantityException;
 import com.ms.orderservice.model.Order;
 import com.ms.orderservice.service.OrderService;
 
@@ -24,7 +25,7 @@ public class OrderController {
 
 	@PostMapping
 	@ResponseStatus(code = HttpStatus.CREATED)
-	public Long placeOrder(@RequestBody OrderDto orderDto) {
+	public Long placeOrder(@RequestBody OrderDto orderDto) throws InsufficientQuantityException {
 		Order order = modelMapper.map(orderDto, Order.class);
 		orderService.placeOrder(order);
 		return order.getId();
