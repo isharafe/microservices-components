@@ -1,0 +1,9 @@
+{"properties": [{
+  "name": "app.eureka.username",
+  "type": "java.lang.String",
+  "description": "hard coded user-name to login to Eureka dash-board"
+},{
+  "name": "app.eureka.password",
+  "type": "java.lang.String",
+  "description": "hard coded password to login to Eureka dash-board"
+}]}
