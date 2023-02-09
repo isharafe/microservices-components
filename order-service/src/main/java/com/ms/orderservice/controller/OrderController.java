@@ -1,5 +1,7 @@
 package com.ms.orderservice.controller;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,9 +27,9 @@ public class OrderController {
 
 	@PostMapping
 	@ResponseStatus(code = HttpStatus.CREATED)
-	public Long placeOrder(@RequestBody OrderDto orderDto) throws InsufficientQuantityException {
+	public CompletableFuture<Long> placeOrder(@RequestBody OrderDto orderDto) throws InsufficientQuantityException {
 		Order order = modelMapper.map(orderDto, Order.class);
-		orderService.placeOrder(order);
-		return order.getId();
+		return orderService.placeOrder(order)
+				.thenApply(Order::getId);
 	}
 }

@@ -1,6 +1,6 @@
 package com.ms.orderservice.exception;
 
-public class InsufficientQuantityException extends Exception {
+public class InsufficientQuantityException extends RuntimeException {
 
 	/**
 	 *
