@@ -17,6 +17,7 @@ import com.ms.orderservice.model.Order;
 import com.ms.orderservice.repository.OrderRepository;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import lombok.RequiredArgsConstructor;
 
@@ -30,6 +31,7 @@ public class OrderService {
 
 	@CircuitBreaker(name = "inventory", fallbackMethod = "fallBackMethod")
 	@TimeLimiter(name = "inventory")
+	@Retry(name = "inventory")
 	public CompletableFuture<Order> placeOrder(Order order) {
 
 		order.setOrderNo(UUID.randomUUID().toString());
