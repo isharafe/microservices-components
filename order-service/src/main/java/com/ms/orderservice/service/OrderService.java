@@ -11,9 +11,11 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.ms.orderservice.dto.InventoryResponse;
 import com.ms.orderservice.exception.InsufficientQuantityException;
+import com.ms.orderservice.exception.InventoryServiceNotAvailableException;
 import com.ms.orderservice.model.Order;
 import com.ms.orderservice.repository.OrderRepository;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -24,6 +26,7 @@ public class OrderService {
 	private final OrderRepository orderRepository;
 	private final WebClient.Builder webClientBuilder;
 
+	@CircuitBreaker(name = "inventory", fallbackMethod = "fallBackMethod")
 	public void placeOrder(Order order) throws InsufficientQuantityException {
 		order.setOrderNo(UUID.randomUUID().toString());
 
@@ -55,5 +58,14 @@ public class OrderService {
 					.map(InventoryResponse::getSkuCode)
 					.collect(Collectors.joining())));
 		}
+	}
+
+	/**
+	 *
+	 * @param order
+	 * @param runtimeException - exception occurred in the above placeOrder method
+	 */
+	public void fallBackMethod (Order order, RuntimeException runtimeException) {
+		throw new InventoryServiceNotAvailableException("Oops!");
 	}
 }
