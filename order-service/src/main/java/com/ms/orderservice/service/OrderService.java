@@ -19,6 +19,8 @@ import com.ms.orderservice.repository.OrderRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -28,44 +30,53 @@ public class OrderService {
 
 	private final OrderRepository orderRepository;
 	private final WebClient.Builder webClientBuilder;
+	private final Tracer tracer;
 
 	@CircuitBreaker(name = "inventory", fallbackMethod = "fallBackMethod")
 	@TimeLimiter(name = "inventory")
 	@Retry(name = "inventory")
+	/* COmpletableFuture is necessary for "TimeLimiter" annotation **/
 	public CompletableFuture<Order> placeOrder(Order order) {
 
 		order.setOrderNo(UUID.randomUUID().toString());
 
 		return CompletableFuture.supplyAsync(() -> {
 
-			/*
-			 * call inventory service and
-			 * place order if product is in stock
-			 */
-			InventoryResponse[] inventoryResponses = webClientBuilder.build().get()
-			.uri("http://inventory-service/api/inventory/isInStock",
-					uriBuilder -> {
-						order.getOrderLineItems()
-							.forEach(line -> uriBuilder.queryParam(line.getSkuCode(), line.getQuantity()));
-						return uriBuilder.build();
-					})
-			.retrieve()
-			.bodyToMono(InventoryResponse[].class)
-			.block();
+			Span orderQuantityLookup = tracer.nextSpan().name("order-quantity-lookup");
 
-			List<InventoryResponse> noStockItems = Arrays.stream(inventoryResponses)
-					.filter(inventoryResponse -> !inventoryResponse.isInStock())
-					.toList();
+			try(Tracer.SpanInScope quantityLookup = tracer.withSpan(orderQuantityLookup.start())) {
 
-			if(noStockItems.isEmpty()) {
-				orderRepository.save(order);
-				return order;
-			} else {
-				throw new InsufficientQuantityException(
-						String.format("These product items are not in stock - %s. Please try again later.",
-						noStockItems.stream()
-						.map(InventoryResponse::getSkuCode)
-						.collect(Collectors.joining())));
+				/*
+				 * call inventory service and
+				 * place order if product is in stock
+				 */
+				InventoryResponse[] inventoryResponses = webClientBuilder.build().get()
+				.uri("http://inventory-service/api/inventory/isInStock",
+						uriBuilder -> {
+							order.getOrderLineItems()
+								.forEach(line -> uriBuilder.queryParam(line.getSkuCode(), line.getQuantity()));
+							return uriBuilder.build();
+						})
+				.retrieve()
+				.bodyToMono(InventoryResponse[].class)
+				.block();
+
+				List<InventoryResponse> noStockItems = Arrays.stream(inventoryResponses)
+						.filter(inventoryResponse -> !inventoryResponse.isInStock())
+						.toList();
+
+				if(noStockItems.isEmpty()) {
+					orderRepository.save(order);
+					return order;
+				} else {
+					throw new InsufficientQuantityException(
+							String.format("These product items are not in stock - %s. Please try again later.",
+							noStockItems.stream()
+							.map(InventoryResponse::getSkuCode)
+							.collect(Collectors.joining())));
+				}
+			} finally {
+				orderQuantityLookup.end();
 			}
 		});
 	}
