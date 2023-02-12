@@ -6,11 +6,13 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.ms.orderservice.dto.InventoryResponse;
+import com.ms.orderservice.event.OrderPlacedEvent;
 import com.ms.orderservice.exception.InsufficientQuantityException;
 import com.ms.orderservice.exception.InventoryServiceNotAvailableException;
 import com.ms.orderservice.model.Order;
@@ -28,9 +30,12 @@ import lombok.RequiredArgsConstructor;
 @Transactional /* spring will run methods in this class in a transaction */
 public class OrderService {
 
+	private static final String ORDER_PLACED_TOPIC = "order-placed-topic";
+
 	private final OrderRepository orderRepository;
 	private final WebClient.Builder webClientBuilder;
 	private final Tracer tracer;
+	private final KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate;
 
 	@CircuitBreaker(name = "inventory", fallbackMethod = "fallBackMethod")
 	@TimeLimiter(name = "inventory")
@@ -67,6 +72,9 @@ public class OrderService {
 
 				if(noStockItems.isEmpty()) {
 					orderRepository.save(order);
+
+					kafkaTemplate.send(ORDER_PLACED_TOPIC, new OrderPlacedEvent(order.getOrderNo()));
+
 					return order;
 				} else {
 					throw new InsufficientQuantityException(
