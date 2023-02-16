@@ -19,8 +19,12 @@ public class SecurityConfig {
 		serverHttpSecurity
 			.csrf().disable()
 			.authorizeExchange(exchange -> exchange
-					/* exclude eureka js and css content as these won't need to be authenticated*/
-					.pathMatchers("/eureka/**").permitAll()
+					.pathMatchers(
+							/* exclude eureka js and css content as these won't need to be authenticated*/
+							"/eureka/**",
+							/* exclude keycloak forward urls*/
+							"/realms/**"
+							).permitAll()
 					/* authenticate any other urls */
 					.anyExchange().authenticated()
 					)
