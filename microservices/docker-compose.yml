@@ -97,6 +97,20 @@ services:
       - discovery-service
       - product-service
 
+  ms-grafana:
+    image: grafana/grafana-oss
+    container_name: ms-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./app-data/grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=password
+    depends_on:
+      - ms-prometheus
+
 
 # microservices
 
