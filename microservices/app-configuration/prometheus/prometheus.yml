@@ -1,0 +1,42 @@
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+scrape_configs:
+
+  # Make Prometheus scrape itself for metrics.
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['ms-prometheus:9090']
+
+  - job_name: 'api_gateway'
+    metrics_path: '/actuator/prometheus'
+    oauth2:
+      client_id: 'spring-boot-microservice-learn-client'
+      client_secret_file: '/etc/prometheus/keycloak-client.secret'
+      scopes: ['openid']
+      token_url: 'http://ms-keycloak:8080/realms/microservices-learn-realm/protocol/openid-connect/token'
+    static_configs:
+      - targets: ['api-gateway:8080']
+        labels:
+          application: 'API gateway Application'
+
+  - job_name: 'discovery_service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['discovery-service:8761']
+        labels:
+          application: 'Discovery service Application'
+
+  # Discover Eureka services to scrape.
+  - job_name: 'eureka'
+    metrics_path: '/actuator/prometheus'
+    # Scrape Eureka itself to discover new services.
+    eureka_sd_configs:
+      - server: http://discovery-service:8761/eureka
+
+    relabel_configs:
+      - source_labels: [__meta_eureka_app_instance_vip_address]
+        target_label: job
+        replacement: '${1}'
+
