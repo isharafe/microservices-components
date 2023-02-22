@@ -24,7 +24,7 @@
     * Grant Type = Client Credentials
     * Access Token URL = [get url from : Key Cloak -> Realm settings -> token_endpoint]
     * Client ID = [use above created client's ID]
-    * Client ID = [use above created client's credentials]
+    * Client Secret = [use above created client's credentials]
     * Client Authentication = Send as Basic Auth header
 
 * Click "Get New Access Token"
